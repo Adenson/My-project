@@ -1,0 +1,13 @@
+﻿生成启动时间为 2020/4/10 3:20:36。
+     1>项目“D:\Study ---》Offer\代码存储\项目\MemoryPool\MemoryPool\MemoryPool.vcxproj”在节点 2 上(Rebuild 个目标)。
+     1>ClCompile:
+         E:\软件\vs2013\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt test.cpp
+         test.cpp
+     1>d:\study ---》offer\代码存储\项目\memorypool\memorypool\public.h(112): warning C4554: “>>”: 检查运算符优先级可能存在的错误；使用圆括号阐明优先级
+     1>d:\study ---》offer\代码存储\项目\memorypool\memorypool\centralcache.h(76): error C2065: “_”: 未声明的标识符
+     1>d:\study ---》offer\代码存储\项目\memorypool\memorypool\centralcache.h(76): error C2143: 语法错误 : 缺少“;”(在“}”的前面)
+     1>已完成生成项目“D:\Study ---》Offer\代码存储\项目\MemoryPool\MemoryPool\MemoryPool.vcxproj”(Rebuild 个目标)的操作 - 失败。
+
+生成失败。
+
+已用时间 00:00:01.60
