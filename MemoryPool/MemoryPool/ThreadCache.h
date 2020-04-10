@@ -12,10 +12,14 @@ public:
 	// 从中心缓存获取对象
 	void* GetSpace_FromCentralCache(size_t index);
 	//如果自由链表中的对象超过一定长度就需要释放到CentralCache
-	void ListTooLong(Freelist& freelist, size_t num);
+	void ListTooLong(Freelist& freelist, size_t num,size_t size);
 private:
 	Freelist _freeLists[NFREE_LIST];
 };
+
+//线程TLS
+//一个线程内部的各个函数调用都能访问、但其它线程不能访问的变量（被称为static memory local to a thread 线程局部静态变量),也就是TLS
+_declspec (thread) static ThreadCache* tlsThreadCache = nullptr;
 
 //申请内存
 void* ThreadCache::Allocte(size_t size)
@@ -31,13 +35,13 @@ void* ThreadCache::Allocte(size_t size)
 	}
 }
 
-void ThreadCache::ListTooLong(Freelist& freelist, size_t num)
+void ThreadCache::ListTooLong(Freelist& freelist, size_t num, size_t size)
 {
 	void* start = nullptr;
 	void* end = nullptr;
 	freelist.popRange(start, end, num); 
 	Next_Obj(end) = nullptr;
-	centralCacheInst.ReleaseListToSpans(start);
+	centralCacheInst.ReleaseListToSpans(start, size);
 }
 //释放内存
 void ThreadCache::Deallocte(void* ptr, size_t size)
@@ -49,7 +53,7 @@ void ThreadCache::Deallocte(void* ptr, size_t size)
 	size_t num = SizeClass::NumMoveSize(size);
 	if (freelist.Num() >= num)
 	{
-		ListTooLong(freelist, num);
+		ListTooLong(freelist, num, size);
 	}
 }
 

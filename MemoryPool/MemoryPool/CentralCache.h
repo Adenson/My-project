@@ -8,7 +8,7 @@ public:
 	size_t GetRangeObj(void*& start, void*& end, size_t num, size_t size);
 
 	// 将一定数量的对象释放到span跨度
-	void ReleaseListToSpans(void* start);
+	void ReleaseListToSpans(void* start,size_t size);
 
 	// 从spanlist 或者 page cache获取一个span
 	Span* GetOneSpan(size_t size);
@@ -20,9 +20,16 @@ static CentralCache centralCacheInst;//这里将对象定义成为static,这样可以只实现一
 
 size_t CentralCache::GetRangeObj(void*& start, void*& end, size_t num, size_t size)
 {
+	size_t index = SizeClass::ListIndex(size);
+	SpanList& spanlist = _spanLists[index];
+
+	spanlist.Lock();//加锁
+
 	Span* span = CentralCache::GetOneSpan(size);
 	size_t acualNum = span->_freelist.popRange(start, end, num);
 	span->_usecount += acualNum;
+
+	spanlist.Unlock();//解锁
 	return acualNum;
 }
 
@@ -56,23 +63,36 @@ Span* CentralCache::GetOneSpan(size_t size)
 		start += size;
 		span->_freelist.Push(obj);
 	}
+	span->_objSize = size;
 	spanlist.PushFront(span);
 	return span;
 }
 
-void CentralCache::ReleaseListToSpans(void* start)
+void CentralCache::ReleaseListToSpans(void* start,size_t size)
 {
+	size_t index = SizeClass::ListIndex(size);
+	SpanList& spanlist = _spanLists[index];
+
+	spanlist.Lock();
+
 	while (start)
 	{
 		void* next = Next_Obj(start);
 		PAGE_ID id = (PAGE_ID)start >> PAGE_SHIFT;
-		Span* span = pageCacheInst.GetIdToSpan(id);
+		Span* span = pageCacheInst.GetIdToSpan(id);//通过_idSpanMap找到每一个内存块的span
 		span->_freelist.Push(start);
 		span->_usecount--;
 
+		//如果_usecount == 0,表示当前span切出去的对象全部返回，可以将span还给PageCache。
 		if (span->_usecount == 0)
 		{
-			_
+			size_t index = SizeClass::ListIndex(span->_objSize);
+			_spanLists[index].Erase(span);
+			span->_freelist.Clear();
+			pageCacheInst.ReleaseSpanToPageCache(span);
 		}
+		start = next;
 	}
+
+	spanlist.Unlock();
 }

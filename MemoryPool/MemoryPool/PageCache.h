@@ -12,6 +12,7 @@ private:
 };
 
 static PageCache pageCacheInst;
+
 Span* PageCache::NewSpan(size_t numpage)
 {
 	if (!_spanLists[numpage].Empty())
@@ -71,18 +72,18 @@ void PageCache::ReleaseSpanToPageCache(Span* span)
 	//向前合并页
 	while (1)
 	{
-		PAGE_ID prevPageId = span->_pageid - 1;
-		auto it = _idSpanMap.find(prevPageId);
+		PAGE_ID prevPageID = span->_pageid - 1;
+		auto prevIt = _idSpanMap.find(prevPageID);
 		//前面的页PageCache未申请
-		if (it == _idSpanMap.end())
+		if (prevIt == _idSpanMap.end())
 		{
 			break;
 		}
 		//如果_usecount != 0,说明前面的页还在使用，不能合并
-		Span* prevSpan = it->second;
+		Span* prevSpan = prevIt->second;
 		if (prevSpan->_usecount == 0)
 		{
-			break;
+			break; 
 		}
 		//合并
 		span->_pageid = prevSpan->_pageid;
@@ -91,8 +92,33 @@ void PageCache::ReleaseSpanToPageCache(Span* span)
 		{
 			_idSpanMap[prevSpan->_pageid + i] = span;
 		}
+		_spanLists[prevSpan->_pagesize].Erase(prevSpan);
 		delete prevSpan;
 	}
 
-	//向后合并
+	//向后合并页
+	while (1)
+	{
+		PAGE_ID nextPageID = span->_pageid + span->_pagesize;
+		auto nextIt = _idSpanMap.find(nextPageID);
+		//后面的页PageCache未申请
+		if (nextIt == _idSpanMap.end())
+		{
+			break;
+		}
+		//如果_usecount != 0,说明后面的页还在使用，不能合并
+		Span* nextSpan = nextIt->second;
+		if (nextSpan->_usecount != 0)
+		{
+			break;
+		}
+		span->_pagesize += nextSpan->_pagesize;
+		for (PAGE_ID i = 0; i < nextSpan->_pagesize; ++i)
+		{
+			_idSpanMap[nextSpan->_pageid + i] = span;
+		}
+		_spanLists[nextSpan->_pagesize].Erase(nextSpan);
+		delete nextSpan;
+	}
+		_spanLists[span->_pagesize].PushFront(span);
 }

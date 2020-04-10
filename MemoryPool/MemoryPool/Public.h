@@ -5,6 +5,8 @@
 #include<stdlib.h>
 #include<assert.h>
 #include<map>
+#include<thread>
+#include<mutex>
 #ifdef _WIN32
 #include<Windows.h>
 #endif
@@ -13,7 +15,7 @@ using namespace std;
 const size_t MAX_SIZE = 64 * 1024;
 const size_t NFREE_LIST = MAX_SIZE / 8;
 const size_t MAX_PAGES = 129;
-const size_t PAGE_SHIFT = 12; // 一页为4k,即4*1024 = 2^12
+const size_t PAGE_SHIFT = 12; // 移位，一页为4k,即4*1024 = 2^12
 
 inline void*& Next_Obj(void* obj)  //内敛函数
 {
@@ -72,6 +74,12 @@ public:
 	{
 		return _num;
 	}
+
+	void Clear()
+	{
+		_freelist = nullptr;
+		_num = 0;
+	}
 private:
 	void* _freelist = nullptr;
 	size_t _num = 0;
@@ -109,7 +117,7 @@ public:
 	//[1,8] + 7 = [8,15]
 	static size_t _ListIndex(const size_t size, size_t align_shift)
 	{
-		return (size + ((1 << align_shift) - 1)) >> align_shift - 1;
+		return (size + (1 << align_shift - 1) >> align_shift) - 1;
 		//此处对((1 << align_shift) - 1))加括号看起来有点多余，其实是为了更加方便理解[1,8] + 7 = [8,15]
 	}
 
@@ -220,7 +228,7 @@ struct Span
 	unsigned int _pagesize = 0;//页的数量
 	Freelist _freelist;//自由链表
 	int _usecount = 0;//计算已经使用的内存块数量
-
+	size_t _objSize = 0;//自由链表中对象的大小
 	Span* _prev = nullptr;
 	Span* _next = nullptr;
 };
@@ -288,8 +296,19 @@ public:
 	{
 		return _head;
 	}
+
+	void Lock()
+	{
+		_mtx.lock();
+	}
+
+	void Unlock()
+	{
+		_mtx.unlock();
+	}
 private:
 	Span* _head;
+	mutex _mtx;
 };
 
 inline static void* SystemAlloc(size_t numpage)//从系统申请空间
@@ -304,4 +323,13 @@ inline static void* SystemAlloc(size_t numpage)//从系统申请空间
 		throw std::bad_alloc();
 	}
 	return ptr;
+}
+
+inline static void SystemFree(void* ptr)
+{
+#ifdef _WIN32
+	VirtualFree(ptr,0,MEM_RELEASE);
+#else
+
+#endif
 }

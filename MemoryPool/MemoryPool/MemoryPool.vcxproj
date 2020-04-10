@@ -65,6 +65,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CentralCache.h" />
+    <ClInclude Include="Concurrent.h" />
     <ClInclude Include="PageCache.h" />
     <ClInclude Include="Public.h" />
     <ClInclude Include="ThreadCache.h" />
