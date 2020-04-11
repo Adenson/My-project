@@ -25,9 +25,10 @@ _declspec (thread) static ThreadCache* tlsThreadCache = nullptr;
 void* ThreadCache::Allocte(size_t size)
 {
 	size_t index = SizeClass::ListIndex(size);
-	if (!_freeLists[index].Empty())
+	Freelist& freeList = _freeLists[index];
+	if (!freeList.Empty())
 	{
-		return _freeLists[index].Pop();
+		return freeList.Pop();
 	}
 	else
 	{
@@ -41,7 +42,7 @@ void ThreadCache::ListTooLong(Freelist& freelist, size_t num, size_t size)
 	void* end = nullptr;
 	freelist.popRange(start, end, num); 
 	Next_Obj(end) = nullptr;
-	centralCacheInst.ReleaseListToSpans(start, size);
+	CentralCache::GetInstance().ReleaseListToSpans(start, size);
 }
 //释放内存
 void ThreadCache::Deallocte(void* ptr, size_t size)
@@ -64,7 +65,7 @@ void* ThreadCache::GetSpace_FromCentralCache(size_t size)
 	size_t num = SizeClass::NumMoveSize(size);	
 	void* start = nullptr;
 	void* end = nullptr;
-	size_t actualNum = centralCacheInst.GetRangeObj(start, end, num, size);
+	size_t actualNum = CentralCache::GetInstance().GetRangeObj(start, end, num, size);
 	if (actualNum == 1)//如果只获取到就一个直接返回
 	{
 		return start;
@@ -79,6 +80,13 @@ void* ThreadCache::GetSpace_FromCentralCache(size_t size)
 	} 
 	return nullptr;
 }
+
+
+
+
+
+
+
 
 
 //独立测试ThreadCache

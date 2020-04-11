@@ -1,6 +1,7 @@
 #pragma once
 #include"Public.h"
 #include"PageCache.h"
+//设计为单例模式
 class CentralCache
 {
 public: 
@@ -12,11 +13,19 @@ public:
 
 	// 从spanlist 或者 page cache获取一个span
 	Span* GetOneSpan(size_t size);
+
+	static CentralCache& GetInstance()
+	{
+		static CentralCache Inst;
+		return Inst;
+	}
 private:
+	CentralCache()
+	{}
+	CentralCache(const CentralCache& CentralCache) = delete;
 	SpanList _spanLists[NFREE_LIST];
 };
 
-static CentralCache centralCacheInst;//这里将对象定义成为static,这样可以只实现一个CentralCache
 
 size_t CentralCache::GetRangeObj(void*& start, void*& end, size_t num, size_t size)
 {
@@ -52,7 +61,7 @@ Span* CentralCache::GetOneSpan(size_t size)
 
 	// 从PageCache 获取一个span
 	size_t numpage = SizeClass::NumMovePage(size);
-	Span* span = pageCacheInst.NewSpan(numpage);
+	Span* span = PageCache::GetInstance().NewSpan(numpage);
 
 	//将span对象切成对应大小挂到span的freelist中
 	char* start = (char*)(span->_pageid << 12);
@@ -79,7 +88,7 @@ void CentralCache::ReleaseListToSpans(void* start,size_t size)
 	{
 		void* next = Next_Obj(start);
 		PAGE_ID id = (PAGE_ID)start >> PAGE_SHIFT;
-		Span* span = pageCacheInst.GetIdToSpan(id);//通过_idSpanMap找到每一个内存块的span
+		Span* span = PageCache::GetInstance().GetIdToSpan(id);//通过_idSpanMap找到每一个内存块的span
 		span->_freelist.Push(start);
 		span->_usecount--;
 
@@ -89,7 +98,7 @@ void CentralCache::ReleaseListToSpans(void* start,size_t size)
 			size_t index = SizeClass::ListIndex(span->_objSize);
 			_spanLists[index].Erase(span);
 			span->_freelist.Clear();
-			pageCacheInst.ReleaseSpanToPageCache(span);
+			PageCache::GetInstance().ReleaseSpanToPageCache(span);
 		}
 		start = next;
 	}

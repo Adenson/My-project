@@ -88,36 +88,10 @@ private:
 class SizeClass
 {
 public:
-	//计算申请的空间的对应的下标
-	//static size_t ListIndex(const size_t size)
-	//{
-	//	if (size % 8 == 0)
-	//	{
-	//		return size / 8 - 1;
-	//	}
-	//	else
-	//	{
-	//		return size / 8;
-	//	}
-	//}
-
-	//将申请的空间大小对齐到 8 的最小整数倍
-	//static size_t RoundUp(size_t size)
-	//{
-	//	if (size % 8 != 0)
-	//	{
-	//		return (size / 8 + 1) * 8;
-	//	}
-	//	else
-	//	{
-	//		return size;
-	//	}
-	//}
-
 	//[1,8] + 7 = [8,15]
 	static size_t _ListIndex(const size_t size, size_t align_shift)
 	{
-		return (size + (1 << align_shift - 1) >> align_shift) - 1;
+		return ((size + ((1 << align_shift) - 1)) >> align_shift) - 1;
 		//此处对((1 << align_shift) - 1))加括号看起来有点多余，其实是为了更加方便理解[1,8] + 7 = [8,15]
 	}
 

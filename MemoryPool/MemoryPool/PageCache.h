@@ -1,19 +1,31 @@
 #pragma once
 #include"Public.h"
+//单例模式
 class PageCache
 {
 public:
 	Span* NewSpan(size_t numpage); 
+	Span* _NewSpan(size_t numpage);
 	Span* GetIdToSpan(PAGE_ID id);
 	void ReleaseSpanToPageCache(Span* span);
+
+	static PageCache& GetInstance()
+	{
+		static PageCache Inst;
+		return Inst;
+	}
+	
 private:
 	SpanList _spanLists[MAX_PAGES];
 	map<PAGE_ID, Span*> _idSpanMap;
+	mutex _mtx;
+
+	PageCache()
+	{}
+	PageCache(const PageCache& PageCache) = delete;
 };
 
-static PageCache pageCacheInst;
-
-Span* PageCache::NewSpan(size_t numpage)
+Span* PageCache::_NewSpan(size_t numpage)
 {
 	if (!_spanLists[numpage].Empty())
 	{
@@ -33,7 +45,7 @@ Span* PageCache::NewSpan(size_t numpage)
 			newspan->_pagesize = numpage;
 			for (PAGE_ID i = 0; i < numpage; i++)
 			{
-				_idSpanMap[newspan->_pageid] = newspan;
+				_idSpanMap[newspan->_pageid + i] = newspan;
 			}
 			span->_pagesize -= numpage;
 			_spanLists[span->_pagesize].PushFront(span);
@@ -46,14 +58,24 @@ Span* PageCache::NewSpan(size_t numpage)
 	bigspan->_pageid = (PAGE_ID)ptr >> PAGE_SHIFT;
 	bigspan->_pagesize = MAX_PAGES - 1;
 
-	for (PAGE_ID i = 0; i < bigspan->_pagesize; i++)//将申请出来内存的每一页的_pageid都映射一个Span*,刚开始的多个页号都映射同一个Span*
+	//将申请出来内存的每一页的_pageid都映射一个Span*,刚开始的多个页号都映射同一个Span*
+	for (PAGE_ID i = 0; i < bigspan->_pagesize; i++)
 	{
 		_idSpanMap[bigspan->_pageid + i] = bigspan;
 	}
 	_spanLists[bigspan->_pagesize].PushBack(bigspan);
-	return NewSpan(numpage);//此次巧妙设计调用递归,多思考
+	return _NewSpan(numpage);//此次巧妙设计调用递归,多思考
 }
 
+//为了防止递归锁
+Span* PageCache::NewSpan(size_t numpage)
+{
+	_mtx.lock();
+	Span* span = _NewSpan(numpage);
+	_mtx.unlock();
+
+	return span;
+}
 Span* PageCache::GetIdToSpan(PAGE_ID id)
 {
 	auto it = _idSpanMap.find(id);
@@ -86,6 +108,11 @@ void PageCache::ReleaseSpanToPageCache(Span* span)
 			break; 
 		}
 		//合并
+		//如果合并超过128页的span，那么就不要合并了
+		if (span->_pagesize + prevSpan->_pagesize >= MAX_PAGES)
+		{
+			break;
+		}
 		span->_pageid = prevSpan->_pageid;
 		span->_pagesize += prevSpan->_pagesize;
 		for (PAGE_ID i = 0; i < prevSpan->_pagesize; ++i)
@@ -109,6 +136,11 @@ void PageCache::ReleaseSpanToPageCache(Span* span)
 		//如果_usecount != 0,说明后面的页还在使用，不能合并
 		Span* nextSpan = nextIt->second;
 		if (nextSpan->_usecount != 0)
+		{
+			break;
+		}
+		//如果合并超过128页的span，那么就不要合并了
+		if (span->_pagesize + nextSpan->_pagesize >= MAX_PAGES)
 		{
 			break;
 		}
