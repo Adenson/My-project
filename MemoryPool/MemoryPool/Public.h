@@ -4,7 +4,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<assert.h>
-#include<map>
+#include<unordered_map>
 #include<thread>
 #include<mutex>
 #ifdef _WIN32

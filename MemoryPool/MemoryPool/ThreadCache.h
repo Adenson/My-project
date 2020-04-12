@@ -36,14 +36,7 @@ void* ThreadCache::Allocte(size_t size)
 	}
 }
 
-void ThreadCache::ListTooLong(Freelist& freelist, size_t num, size_t size)
-{
-	void* start = nullptr;
-	void* end = nullptr;
-	freelist.popRange(start, end, num); 
-	Next_Obj(end) = nullptr;
-	CentralCache::GetInstance().ReleaseListToSpans(start, size);
-}
+
 //释放内存
 void ThreadCache::Deallocte(void* ptr, size_t size)
 {
@@ -58,6 +51,14 @@ void ThreadCache::Deallocte(void* ptr, size_t size)
 	}
 }
 
+void ThreadCache::ListTooLong(Freelist& freelist, size_t num, size_t size)
+{
+	void* start = nullptr;
+	void* end = nullptr;
+	freelist.popRange(start, end, num); 
+	Next_Obj(end) = nullptr;
+	CentralCache::GetInstance().ReleaseListToSpans(start, size);
+}
 
 //当 _freeLists[index] 为 nullptr 时，从 CentralCache 中取空间
 void* ThreadCache::GetSpace_FromCentralCache(size_t size)
@@ -75,10 +76,9 @@ void* ThreadCache::GetSpace_FromCentralCache(size_t size)
 		//如果获取到多个，就返回一个，将剩下的挂起来
 		size_t index = SizeClass::ListIndex(size);
 		Freelist& list = _freeLists[index];
-		list.pushRange(Next_Obj(start), end, actualNum);
+		list.pushRange(Next_Obj(start), end, actualNum - 1);
 		return start;
 	} 
-	return nullptr;
 }
 
 
