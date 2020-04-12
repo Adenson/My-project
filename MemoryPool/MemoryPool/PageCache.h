@@ -17,7 +17,7 @@ public:
 	
 private:
 	SpanList _spanLists[MAX_PAGES];
-	map<PAGE_ID, Span*> _idSpanMap;
+	unordered_map<PAGE_ID, Span*> _idSpanMap;
 	mutex _mtx;
 
 	PageCache()
@@ -63,7 +63,7 @@ Span* PageCache::_NewSpan(size_t numpage)
 	{
 		_idSpanMap[bigspan->_pageid + i] = bigspan;
 	}
-	_spanLists[bigspan->_pagesize].PushBack(bigspan);
+	_spanLists[bigspan->_pagesize].PushFront(bigspan);
 	return _NewSpan(numpage);//此次巧妙设计调用递归,多思考
 }
 
@@ -103,7 +103,7 @@ void PageCache::ReleaseSpanToPageCache(Span* span)
 		}
 		//如果_usecount != 0,说明前面的页还在使用，不能合并
 		Span* prevSpan = prevIt->second;
-		if (prevSpan->_usecount == 0)
+		if (prevSpan->_usecount != 0)
 		{
 			break; 
 		}
