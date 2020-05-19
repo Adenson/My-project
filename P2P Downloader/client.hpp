@@ -2,6 +2,7 @@
 #include<thread>
 #include"util.hpp"
 #include"httplib.h"
+#include"boost/filesystem.hpp"
 #define P2P_PORT 9000
 #define IPBUFFER 16
 #define SHARED_PATH "./shared"
@@ -161,15 +162,48 @@ private:
 		rsp.status = 200;
 		return;
 	}
-	//获取文件列表
+
+	//获取文件列表（在主机上设置一个共享目录，凡是这个目录下的文件都是要共享给别人的）
 	static void ShareList(const httplib::Request& req, httplib::Response& rsp)
 	{
-
+		boost::filesystem::directory_iterator begin(SHARED_PATH);//实例化目录迭代器
+		boost::filesystem::directory_iterator end;//实例化目录迭代器的末尾
+		for (; begin != end; ++begin)
+		{
+			//bigin->status() 目录中当前文件的状态信息
+			//boost::filesystem::is_directory()判断当前文件是否是一个目录
+			if (boost::filesystem::is_directory(begin->status())){
+				//此处我考虑了获取普通文件名称，不做多层级目录的操作
+				continue;
+			}
+			else{
+				std::string name = begin->path().string();
+				rsp.body += name + "\r\n";
+			}
+		}
+		rsp.status = 200;
+		return;
 	}
 
 	static void Download(const httplib::Request& req, httplib::Response& rsp)
 	{
-
+		//req.path(客户端请求的资源路径,当初客户端前面加的有download，比如：/download/filename.txt）
+		boost::filesystem::path req_path(req.path);
+		//此处只获取文件名称:filename.txt
+		std::string name = req_path.filename().string();
+		//实际文件的路径应该是在共享的目录下
+		std::string realpath = SHARED_PATH + '/' + name;
+		//判断文件是否存在
+		if (!boost::filesystem::exists(realpath) || boost::filesystem::is_directory(realpath))
+		{
+			rsp.status = 404;
+			return;
+		}
+		if (FileUtil::Read(realpath, &rsp.body) == false)
+		{
+			rsp.status = 500;
+		}
+		rsp.status = 200;
 	}
 private:
 	httplib::Server _srv;
