@@ -9,17 +9,36 @@
 #include<vector>
 #include<fstream>
 #include<boost/filesystem.hpp>
+#include<sstream>
 #else
-//linux文件
+//linux头文件
 #endif
 
+class StringUtil
+{
+public:
+	static int64_t Str2Dig(const std::string& num)
+	{
+		std::stringstream tmp;
+		tmp << num;
+		int64_t res;
+		tmp >> res;
+		return res;
+	}
+};
 //文件操作工具类
 class FileUtil
 {
 public:
+	static int64_t GetFileSize(const std::string& name)
+	{
+		return boost::filesystem::file_size(name);
+	}
+
 	static bool Write(const std::string& name, const std::string& body, int64_t offset = 0)//offset为偏移量
 	{
-		std::ofstream ofs(name);
+		std::cout << "写入文件数据:" << name << " " << "size:" << body.size() << std::endl;
+		std::ofstream ofs(name,std::ios::binary);//需要以二进制的方式
 		if (ofs.is_open() == false)
 		{
 			std::cerr << "打开文件失败\n";
@@ -42,7 +61,7 @@ public:
 	//&表示这是一个输入输出型参数
 	static bool Read(const std::string& name, std::string* body)
 	{
-		std::ifstream ifs(name);
+		std::ifstream ifs(name, std::ios::binary);//需要以二进制的方式
 		if (ifs.is_open() == false)
 		{
 			std::cerr << "打开文件失败\n";
@@ -51,14 +70,41 @@ public:
 		//通过文件名获取文件大小
 		int64_t filesize = boost::filesystem::file_size(name);
 		body->resize(filesize);
+		std::cout << "读取文件数据:" << name << " " << "size:" << filesize << std::endl;
 		ifs.read(&(*body)[0], filesize);
-		if (ifs.good() == false)
+
+		//if (ifs.good() == false)
+		//{
+		//	std::cout << *body << std::endl;
+		//	std::cerr << "读取文件数据失败\n";
+		//	ifs.close();
+		//	return false;
+		//}
+
+		ifs.close();
+		return true;
+	}
+
+	//从name文件中offset位置读取len长度数据放到body中
+	static bool ReadRange(const std::string& name, std::string* body, int64_t len, int64_t offset)
+	{
+		body->resize(len);
+		FILE* fp = NULL;
+		fopen_s(&fp, name.c_str(), "rb+");
+		if (fp == NULL)
 		{
-			std::cerr << "读取文件数据失败\n";
-			ifs.close();
+			std::cerr << "打开文件失败\n";
 			return false;
 		}
-		ifs.close();
+		fseek(fp, offset, SEEK_SET);
+		int ret = fread(&(*body)[0], 1, len, fp);
+		if (ret != len)
+		{
+			std::cerr << "从文件中读取数据失败\n";
+			fclose(fp);
+			return false;
+		}
+		fclose(fp);
 		return true;
 	}
 };
