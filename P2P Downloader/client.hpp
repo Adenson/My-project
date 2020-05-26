@@ -314,7 +314,7 @@ private:
 				int64_t range_len = range_end - range_start + 1;//计算出range区间的长度
 				std::cout << realpath << "range:" << range_start << "-" << range_end << std::endl;
 				FileUtil::ReadRange(realpath, &rsp.body, range_len, range_start);
-				rsp.status = 206;
+				rsp.status = 206;//此时的状态码是206
 			}
 			else{
 				//没有Range头部，则是一个完整的文件下载
