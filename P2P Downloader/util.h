@@ -11,7 +11,7 @@
 #include<boost/filesystem.hpp>
 #include<sstream>
 #else
-//linux头文件
+//跨平台linux头文件
 #endif
 
 class StringUtil
