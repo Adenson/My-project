@@ -151,7 +151,7 @@ public:
 		auto rsp = cli.Get(req_path.c_str());
 		if (rsp == NULL || rsp->status != 200)
 		{
-			std::cerr << "下载文件，获取响应信息失败\n";
+			std::cerr << "下载文件， 获取响应信息失败\n";
 			return false;
 		}
 		if (!boost::filesystem::exists(DOWNLOAD_PATH))
