@@ -11,7 +11,7 @@
 #include<boost/filesystem.hpp>
 #include<sstream>
 #else
-//跨平台linux头文件
+//linux头文件
 #endif
 
 class StringUtil
@@ -121,16 +121,15 @@ class AdapterUtil
 {
 #ifdef _WIN32
 public:
-	static bool GetAllAdapter(std::vector<Adapter>* list)
+	static bool GetAllAdapter(std::vector<Adapter>* list)//获取所有网卡信息 
 	{
-		PIP_ADAPTER_INFO p_adapters = new IP_ADAPTER_INFO();
-		//IP_ADAPTER_INFO 是存放网卡信息的结构体；PIP_ADAPTER_INFO是该结构体指针
-		//下面的 GetAdaptersInfo 是在win下获取网卡信息的接口，获取的网卡信息可能有多个，所以传入一个指针（PIP_ADAPTER_INFO）
+		PIP_ADAPTER_INFO p_adapters = new IP_ADAPTER_INFO();//开辟一块网卡信息结构空间
+		//IP_ADAPTER_INFO 是网卡信息的结构体；PIP_ADAPTER_INFO是该网卡信息结构体的指针
 		uint64_t all_adapters_size = sizeof(IP_ADAPTER_INFO);
-		//all_adapters_size用于获取实际所有网卡信息所占用空间大小
+		//all_adapters_size用于获取实际一块网卡信息所占用空间大小
 		int ret = GetAdaptersInfo(p_adapters, (PULONG)&all_adapters_size);
-		//GetAdaptersInfo 是在win下获取网卡信息的接口,获取网卡信息有可能失败，因为空间不足，所以有一个输出型参数，用于向用户返回所有网卡信息占用空间大小
-		if (ret == ERROR_BUFFER_OVERFLOW)//说明缓冲区空间不足，需要重新给指针分配空间
+		//GetAdaptersInfo 是在win下获取网卡信息的接口,获取网卡信息有可能失败，因为可能获取到不止一块网卡，所以导致空间不足，所以GetAdaptersInfo有一个输出型参数all_adapters_size用于向用户返回所当前主机所有网卡信息占用空间大小
+		if (ret == ERROR_BUFFER_OVERFLOW)//说明缓冲区空间不足，当前主机不止一块网卡，需要重新给指针分配空间
 		{
 			delete p_adapters;
 			p_adapters = (PIP_ADAPTER_INFO)new BYTE[all_adapters_size];
@@ -140,6 +139,7 @@ public:
 		while (p_adapters)
 		{
 			Adapter adapter;
+			//将一个字符串点分十进制IP地址转换为网络字节序整数IP地址
 			inet_pton(AF_INET, p_adapters->IpAddressList.IpAddress.String, &adapter._ip_addr);
 			inet_pton(AF_INET, p_adapters->IpAddressList.IpMask.String, &adapter._mask_addr);
 			if (adapter._ip_addr != 0)//有些网卡没有启用导致IP地址为0
