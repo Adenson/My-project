@@ -26,6 +26,7 @@ public:
 		}
 		return true;
 	}
+
 	//主机配对的线程入口函数
 	void HostPair(Host* host)
 	{
@@ -36,9 +37,9 @@ public:
 
 		host->_pair_ret = false;
 		char buf[IPBUFFER] = { 0 };
-		//将网络字节序的IP地址转换为字符串点分十进制IP地址
+		//将网络字节序的IP地址转换为字符串点分十进制IP地址存放在IPBUFFER中
 		inet_ntop(AF_INET, &host->_ip_addr, buf, IPBUFFER);
-		httplib::Client cli(buf, P2P_PORT);
+		httplib::Client cli(buf, P2P_PORT);//服务端的IP地址与端口号
 		auto rsp = cli.Get("/hostpair");//向服务端发送资源为/hostpair的GET请求//若链接建立失败Get会返回NULL
 		if (rsp != NULL && rsp->status == 200)//注意需要判断rsp是否为NULL，否则会出现访问错误
 		{
@@ -46,6 +47,7 @@ public:
 		}
 		return;
 	}
+
 	//获取在线主机
 	bool GetOnlineHost()
 	{
@@ -60,7 +62,7 @@ public:
 		if (ch == 'Y')
 		{
 			std::cout << "开始主机匹配...\n";
-			//1、获取网卡信息，得到局域网中所有的IP地址列表
+			//1、获取网卡信息，得到局域网中所有主机的IP地址
 			std::vector<Adapter> list;
 			AdapterUtil::GetAllAdapter(&list);
 			//获取所有主机IP地址，添加到host_list中
@@ -82,7 +84,7 @@ public:
 					host_list.push_back(host);
 				}
 			}
-			//对host_list中的主机创建线程进行配对
+			//对host_list中的主机创建线程发送配对请求
 			std::vector<std::thread*> thr_list(host_list.size());
 			for (int i = 0; i < host_list.size(); i++)
 			{
@@ -129,7 +131,7 @@ public:
 			std::cerr << "获取文件列表响应出错\n";
 			return false;
 		}
-		//打印正文---打印服务端响应的文件名称列表让用户进行选择
+		//打印正文---打印服务端响应的文件名称列表来让用户进行选择
 		std::cout << rsp->body << std::endl;
 		std::cout << "请选择要下载的文件:";
 		fflush(stdout);
@@ -139,7 +141,7 @@ public:
 		return true;
 	}
 
-	//下载文件（若文件一次性进行下的话如果遇到大文件会比较危险）
+	//下载文件（若文件一次性进行下载的话如果遇到大文件会比较危险）
 	bool DownLoadFile(const std::string& host_ip, const std::string& filename)
 	{
 		//1.向服务端发送文件下载请求“/filename”
@@ -151,7 +153,7 @@ public:
 		auto rsp = cli.Get(req_path.c_str());
 		if (rsp == NULL || rsp->status != 200)
 		{
-			std::cerr << "下载文件， 获取响应信息失败\n";
+			std::cerr << "下载文件，获取响应信息失败\n";
 			return false;
 		}
 		if (!boost::filesystem::exists(DOWNLOAD_PATH))
@@ -182,7 +184,7 @@ public:
 		}
 		//通过HTTP头部字段名获取值
 		std::string clen = rsp->get_header_value("Content-Length");
-		int64_t filesize = StringUtil::Str2Dig(clen);
+		int64_t filesize = StringUtil::Str2Dig(clen);//将字符串转换为数字
 		//2.根据文件大小进行分块
 		  //若文件大小 < 块大小，则直接下载文件
 		if (filesize < MAX_RANGE)
@@ -236,7 +238,6 @@ public:
 	bool Start()
 	{
 		//添加针对客户端请求的处理方式对应关系
-
 		_srv.Get("/hostpair", HostPair);
 		_srv.Get("/list", ShareList);
 
@@ -265,7 +266,7 @@ private:
 		{
 			boost::filesystem::create_directory(SHARED_PATH);
 		}
-		boost::filesystem::directory_iterator begin(SHARED_PATH);//实例化目录迭代器
+		boost::filesystem::directory_iterator begin(SHARED_PATH);//实例化目录迭代器开始
 		boost::filesystem::directory_iterator end;//实例化目录迭代器的末尾
 		for (; begin != end; ++begin)
 		{
@@ -278,7 +279,7 @@ private:
 			else{
 				std::string name = begin->path().filename().string();//将返回的文件设置成为不带有路径的
 				rsp.body += name + "\r\n";
-			}
+			} 
 		}
 		rsp.status = 200;
 		return;
@@ -309,12 +310,12 @@ private:
 				httplib::Ranges ranges;
 				//ranges其实是一个vector<Range> ,Range是一个键值对std::pair<start,end>
 				httplib::detail::parse_range_header(range_str, ranges);//解析客户端的Range数据
-				int64_t range_start = ranges[0].first;//pari中的first就是range的start位置
+				int64_t range_start = ranges[0].first;//pair中的first就是range的start位置
 				int64_t range_end = ranges[0].second;//pair中的second就是range的end位置
 				int64_t range_len = range_end - range_start + 1;//计算出range区间的长度
 				std::cout << realpath << "range:" << range_start << "-" << range_end << std::endl;
 				FileUtil::ReadRange(realpath, &rsp.body, range_len, range_start);
-				rsp.status = 206;//此时的状态码是206
+				rsp.status = 206;
 			}
 			else{
 				//没有Range头部，则是一个完整的文件下载
