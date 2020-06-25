@@ -186,7 +186,7 @@ public:
 		std::string clen = rsp->get_header_value("Content-Length");
 		int64_t filesize = StringUtil::Str2Dig(clen);//将字符串转换为数字
 		//2.根据文件大小进行分块
-		  //若文件大小 < 块大小，则直接下载文件
+		  //若文件大小 < 设置的块大小，则直接下载文件
 		if (filesize < MAX_RANGE)
 		{
 			return DownLoadFile(host_ip, filename);
