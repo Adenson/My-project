@@ -45,7 +45,7 @@ public:
 			return false;
 		}
 		ofs.seekp(offset, std::ios::beg);//读写位置到相对于文件起始位置开始偏移offset的偏移量相当于fseek
-		ofs.write(&body[0], body.size());
+		ofs.write(&body[0], body.size());//body[0]也就是第一个字符的地址，也就是这块空间的首地址
 		if (ofs.good() == false)//判断上次向文件写入数据是否成功
 		{
 			std::cerr << "向文件写入数据失败\n";
@@ -67,19 +67,19 @@ public:
 			std::cerr << "打开文件失败\n";
 			return false;
 		}
-		//通过文件名获取文件大小
+		//通过boost库获取文件名来获取文件大小
 		int64_t filesize = boost::filesystem::file_size(name);
 		body->resize(filesize);
 		std::cout << "读取文件数据:" << name << " " << "size:" << filesize << std::endl;
 		ifs.read(&(*body)[0], filesize);
 
-		//if (ifs.good() == false)
-		//{
-		//	std::cout << *body << std::endl;
-		//	std::cerr << "读取文件数据失败\n";
-		//	ifs.close();
-		//	return false;
-		//}
+		if (ifs.good() == false)
+		{
+			//std::cout << *body << std::endl;
+			std::cerr << "读取文件数据失败\n";
+			ifs.close();
+			return false;
+		}
 
 		ifs.close();
 		return true;
